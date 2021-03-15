@@ -8,7 +8,7 @@ function (regr::LinearRegression)(beta)
   return dot(r, r) / 2
 end
 
-function test_autodiff_model()
+function test_rautodiff_model()
   x0 = zeros(2)
   f(x) = dot(x,x)
   nlp = RADNLPModel(f, x0)
@@ -46,3 +46,6 @@ function test_autodiff_model()
     @test_throws DimensionError RADNLPModel(f, x0, lvar, uvar, c, lcon, ucon, y0=bady0)
   end
 end
+
+#Make it work!
+#test_rautodiff_model()

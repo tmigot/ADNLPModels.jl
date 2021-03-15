@@ -1,37 +1,4 @@
-using ADNLPModels, LinearAlgebra, NLPModels, NLPModelsModifiers, NLPModelsTest, SparseArrays, Test
-
-for problem in NLPModelsTest.nlp_problems ∪ ["GENROSE"]
-  include("nlp/problems/$(lowercase(problem)).jl")
-end
-for problem in NLPModelsTest.nls_problems
-  include("nls/problems/$(lowercase(problem)).jl")
-end
 for problem in setdiff(NLPModelsTest.nlp_problems,["LINCON"])
-  include("radnlp/problems/$(lowercase(problem)).jl")
-end
-
-include("nlp/basic.jl")
-include("nls/basic.jl")
-include("nlp/nlpmodelstest.jl")
-include("nls/nlpmodelstest.jl")
-include("radnlp/basic.jl") #Doesn't work
-include("radnlp/nlpmodelstest.jl") #Partially work
-
-#=
-#List of problems used in extansive tests
-list_problems = ["arglina", "arglinb", "arglinc", "arwhead", "bdqrtic", "beale", "broydn7d",
-             "brybnd", "chainwoo", "chnrosnb", "cosine", "cragglvy", "dixon3dq", "dqdrtic",
-             "dqrtic", "edensch", "eg2", "engval1", "errinros", "extrosnb", "fletcbv2",
-             "fletcbv3", "fletchcr", "freuroth", "genhumps", "genrose", "genrose_nash",
-             "indef", "liarwhd", "morebv", "ncb20", "ncb20b", "noncvxu2", "noncvxun",
-             "nondia", "nondquar", "nzf1", "penalty2", "penalty3", "powellsg", "power",
-             "quartc", "sbrybnd", "schmvett", "scosine", "sparsine", "sparsqur", "srosenbr",
-             "sinquad", "tointgss", "tquartic", "tridia", "vardim", "woods"]
-for pb in list_problems
-    include("problems/$(lowercase(pb)).jl")
-end
-
-for problem in list_problems
   @testset "Checking NLPModelsTest tests on problem $problem" begin
     nlp_ad = eval(Meta.parse(lowercase(problem) * "_autodiff"))()
     nlp_rad = eval(Meta.parse(lowercase(problem) * "_radnlp"))()
@@ -81,4 +48,3 @@ for problem in list_problems
     end
   end
 end
-=#
