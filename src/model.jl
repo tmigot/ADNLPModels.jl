@@ -353,6 +353,7 @@ function NLPModels.jprod!(model :: RADNLPModel, x :: AbstractVector, v :: Abstra
   @lencheck model.meta.nvar x v
   @lencheck model.meta.ncon Jv
   increment!(model, :neval_jprod)
+  #Option 1: ForwardDiff
   Jv .= ForwardDiff.derivative(t -> model.c(x + t * v), 0)
   return Jv
 end
@@ -361,6 +362,7 @@ function NLPModels.jtprod!(model :: RADNLPModel, x :: AbstractVector, v :: Abstr
   @lencheck model.meta.nvar x Jtv
   @lencheck model.meta.ncon v
   increment!(model, :neval_jtprod)
+  #Option 1: ForwardDiff
   Jtv .= ForwardDiff.gradient(x -> dot(model.c(x), v), x) #ReverseDiff without preparation isn't better
   return Jtv
 end
@@ -421,8 +423,8 @@ function NLPModels.hprod!(model :: RADNLPModel, x :: AbstractVector, y :: Abstra
   @lencheck model.meta.nvar x v Hv
   @lencheck model.meta.ncon y
   increment!(model, :neval_hprod)
-  #... TODO
-  ℓ(x) = obj_weight * nlp.f(x) + dot(nlp.c(x), y)
+  #Option 1: ForwardDiff
+  ℓ(x) = obj_weight * model.f(x) + dot(model.c(x), y)
   Hv .= ForwardDiff.derivative(t -> ForwardDiff.gradient(ℓ, x + t * v), 0)
   return Hv
 end
@@ -430,11 +432,9 @@ end
 function NLPModels.hprod!(model :: RADNLPModel, x :: AbstractVector, v :: AbstractVector, Hv :: AbstractVector; obj_weight :: Float64=1.0)
   @lencheck model.meta.nvar x v Hv
   increment!(model, :neval_hprod)
-  #...
-  #= Option 1
-  ℓ(x) = obj_weight * nlp.f(x)
+  #Option 1
+  ℓ(x) = obj_weight * model.f(x)
   Hv .= ForwardDiff.derivative(t -> ForwardDiff.gradient(ℓ, x + t * v), 0)
-  =#
   #= Option 2
   autoback_hesvec(nlp.f,nlp.meta.x0,nlp.meta.x0)
   =#
