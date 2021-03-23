@@ -21,13 +21,13 @@ mutable struct RADNLPModel <: AbstractNLPModel #AbstractADNLPModel
   counters :: Counters
 
   # Functions
-  f   :: Function
-  c   :: Function
-  ∇f! :: Function
+  f
+  c
+  ∇f!
   cfg #config gradient Union{Nothing, ReverseDiff.CompiledTape}
-
   cfH #config for the Hessian computation
   cfJ #config for the Jacobian computation
+  cfℓ #config the Lagrangian Hessian computation
 end
 
 show_header(io :: IO, model :: RADNLPModel) = println(io, "RADNLPModel - Model with automatic differentiation")
@@ -35,8 +35,7 @@ show_header(io :: IO, model :: RADNLPModel) = println(io, "RADNLPModel - Model w
 """
 Create an RADNLPModel with ReverseDiff.gradient! and precompilation work.
 """
-function smart_reverse(x0 :: AbstractVector,
-                       f  :: Function)
+function smart_reverse(x0 :: AbstractVector, f)
 
   # build in-place objective gradient
   v = similar(x0)
@@ -51,8 +50,7 @@ end
 """
 Create an RADNLPModel with ReverseDiff.gradient!
 """
-function reverse(:: AbstractVector,
-                 f :: Function)
+function reverse(:: AbstractVector, f)
 
   cfg = nothing
   ∇f!(g, x, cfg) = ReverseDiff.gradient!(g, f, x)
@@ -62,7 +60,7 @@ end
 
 #=
 function RADNLPModel(meta :: AbstractNLPModelMeta,
-                     f    :: Function,
+                     f,
                      cfH  :: ForwardColorJacCache;
                      gradient :: Function = smart_reverse)
   
@@ -112,7 +110,7 @@ Given a function `f(x)` of size `m`, and a vector `x0` of size `n`,
 returns the number of non-zeros in the jacobian (after forming the sparse matrix),
 and the config data.
 """
-function _meta_function(c :: Function, x0 :: AbstractVector{T}, m :: Int, n :: Int, ::Val{false}) where T
+function _meta_function(c, x0 :: AbstractVector{T}, m :: Int, n :: Int, ::Val{false}) where T
   
   @variables xs[1:n]
   _fun = c(xs)
@@ -123,7 +121,7 @@ function _meta_function(c :: Function, x0 :: AbstractVector{T}, m :: Int, n :: I
  return nnzh, cfJ
 end
 
-function _meta_function(c :: Function, x0 :: AbstractVector{T}, m :: Int, n :: Int, ::Val{true}) where T
+function _meta_function(c, x0 :: AbstractVector{T}, m :: Int, n :: Int, ::Val{true}) where T
 
   @variables xs[1:n]
   _fun = c(xs)
@@ -134,7 +132,7 @@ function _meta_function(c :: Function, x0 :: AbstractVector{T}, m :: Int, n :: I
  return nnzh, cfJ
 end
 
-function _meta_function(f :: Function, x0 :: AbstractVector{T}, n :: Int, ::Val{false}) where T
+function _meta_function(f, x0 :: AbstractVector{T}, n :: Int, ::Val{false}) where T
 
   @variables xs[1:n]
   _fun = f(xs)
@@ -144,10 +142,10 @@ function _meta_function(f :: Function, x0 :: AbstractVector{T}, n :: Int, ::Val{
   cfH  = Symbolics.build_function(S, xs, expression = Val{false})
   nnzh = nnz(S) 
 
- return nnzh, cfH
+ return nnzh, (cfH[1], cfH[2], nnzh)
 end
 
-function _meta_function(f :: Function, x0 :: AbstractVector{T}, n :: Int, ::Val{true}) where T
+function _meta_function(f, x0 :: AbstractVector{T}, n :: Int, ::Val{true}) where T
 
   @variables xs[1:n]
   _fun = f(xs)
@@ -158,7 +156,34 @@ function _meta_function(f :: Function, x0 :: AbstractVector{T}, n :: Int, ::Val{
  return nnzh, cfH
 end
 
-function RADNLPModel(f         :: Function, 
+function _meta_function(f, c, x0 :: AbstractVector{T}, m :: Int, n :: Int, ::Val{true}) where T
+
+  @variables xs[1:n]
+  @variables ys[1:m]
+  _lag = f(xs) + dot(ys, c(xs))
+  S = tril(Symbolics.hessian_sparsity(_lag, xs))
+  cfℓ = nothing #factorization-free adaptation
+  nnzh = nnz(S)
+
+ return nnzh, cfℓ
+end
+
+function _meta_function(f, c, x0 :: AbstractVector{T}, m :: Int, n :: Int, ::Val{false}) where T
+
+  @variables xs[1:n]
+  @variables ys[1:m]
+  @variables obj_weight
+  _lag = obj_weight * f(xs) + dot(ys, c(xs))
+  S = tril(Symbolics.sparsehessian(_lag, xs))
+  #use keyword `expression = Val{false}` to get a pre-compiled code
+  #pair of out-of-place / in-place function
+  cfℓ = Symbolics.build_function(S, xs, ys, obj_weight, expression = Val{false})
+  nnzh = nnz(S)
+
+ return nnzh, cfℓ
+end
+
+function RADNLPModel(f, 
                      x0        :: AbstractVector{T}; 
                      name      :: String="GenericADNLPModel", 
                      gradient  :: Function = smart_reverse,
@@ -174,10 +199,10 @@ function RADNLPModel(f         :: Function,
 
   counters = Counters()
 
-  return RADNLPModel(meta, counters, f, x->T[], ∇f!, cfg, cfH, nothing)
+  return RADNLPModel(meta, counters, f, x->T[], ∇f!, cfg, cfH, nothing, nothing)
 end
 
-function RADNLPModel(f         :: Function, 
+function RADNLPModel(f, 
                      x0        :: AbstractVector{T}, 
                      lvar      :: AbstractVector, 
                      uvar      :: AbstractVector;
@@ -197,12 +222,12 @@ function RADNLPModel(f         :: Function,
   
   counters = Counters()
   
-  return RADNLPModel(meta, counters, f, x->T[], ∇f!, cfg, cfH, nothing)
+  return RADNLPModel(meta, counters, f, x->T[], ∇f!, cfg, cfH, nothing, nothing)
 end
 
-function RADNLPModel(f         :: Function, 
+function RADNLPModel(f, 
                      x0        :: AbstractVector{T},
-                     c         :: Function,
+                     c,
                      lcon      :: AbstractVector,
                      ucon      :: AbstractVector; 
                      name      :: String="GenericADNLPModel",
@@ -221,6 +246,7 @@ function RADNLPModel(f         :: Function,
   (∇f!, cfg) = gradient(x0, f)
   nnzh, cfH = _meta_function(f, x0, nvar, Val(hess_free))
   nnzj, cfJ = _meta_function(c, x0, ncon, nvar, Val(jac_free))
+  nnzh, cfℓ = _meta_function(f, c, x0, ncon, nvar, Val(hess_free))
 
   nln = setdiff(1:ncon, lin)
 
@@ -230,7 +256,44 @@ function RADNLPModel(f         :: Function,
 
   counters = Counters()
 
-  return RADNLPModel(meta, counters, f, c, ∇f!, cfg, cfH, cfJ)
+  return RADNLPModel(meta, counters, f, c, ∇f!, cfg, cfH, cfJ, cfℓ)
+end
+
+function RADNLPModel(f, 
+                     x0        :: AbstractVector{T},
+                     lvar      :: AbstractVector, 
+                     uvar      :: AbstractVector,
+                     c,
+                     lcon      :: AbstractVector,
+                     ucon      :: AbstractVector; 
+                     name      :: String="GenericADNLPModel",
+                     y0        :: AbstractVector=fill!(similar(lcon), zero(T)),
+                     lin       :: AbstractVector{<: Integer}=Int[], 
+                     gradient  :: Function = smart_reverse, 
+                     hess_free :: Bool = false, 
+                     jac_free  :: Bool = false, 
+                     kwargs...) where T
+
+  nvar = length(x0)
+  ncon = length(lcon)
+  @lencheck nvar x0
+  @lencheck ncon ucon y0
+
+  (∇f!, cfg) = gradient(x0, f)
+  nnzh, cfH = _meta_function(f, x0, nvar, Val(hess_free))
+  nnzj, cfJ = _meta_function(c, x0, ncon, nvar, Val(jac_free))
+  nnzh, cfℓ = _meta_function(f, c, x0, ncon, nvar, Val(hess_free))
+
+  nln = setdiff(1:ncon, lin)
+
+  meta = NLPModelMeta(nvar, x0=x0, lvar=lvar, uvar=uvar,
+    ncon=ncon, y0=y0, lcon=lcon, ucon=ucon,
+    nnzj=nnzj, nnzh=nnzh, lin=lin, nln=nln, minimize=true,
+    islp=false, name=name)
+
+  counters = Counters()
+
+  return RADNLPModel(meta, counters, f, c, ∇f!, cfg, cfH, cfJ, cfℓ)
 end
 
 function NLPModels.obj(model :: RADNLPModel, x :: AbstractVector)
@@ -307,8 +370,14 @@ end
 function NLPModels.hess_structure!(model :: RADNLPModel, rows :: AbstractVector{<: Integer}, cols :: AbstractVector{<: Integer})
   @lencheck model.meta.nnzh rows cols
   #using Symbolics.hessian_sparsity
-  @variables xs[1:model.meta.nvar]
-  _fun = model.f(xs)
+  if model.meta.ncon > 0
+    @variables xs[1:model.meta.nvar]
+    @variables ys[1:model.meta.ncon]
+    _fun = model.f(xs) + dot(ys, model.c(xs))
+  else
+    @variables xs[1:model.meta.nvar]
+    _fun = model.f(xs)
+  end
   H = tril(Symbolics.hessian_sparsity(_fun, xs)) #with boolean values
   rows, cols, _ = findnz(H) 
   return rows, cols
@@ -368,9 +437,9 @@ function hess(model :: RADNLPModel, x :: AbstractVector{T}; obj_weight :: Real =
   increment!(model, :neval_hess)
   if model.meta.nnzh == 0
     return spzeros(T, model.meta.nvar, model.meta.nvar)
-  elseif obj_weight == 0.
+  elseif model.cfH[3] == 0 || obj_weight == 0
     rows, cols = hess_structure(model)
-    return sparse(T, rows, cols, zeros(T, model.meta.nnzh), model.meta.nvar, model.meta.nvar)
+    return sparse(rows, cols, zeros(T, model.meta.nnzh), model.meta.nvar, model.meta.nvar)
   end
   #ℓ(x) = obj_weight * nlp.f(x)
   #Option 1:
@@ -388,11 +457,15 @@ function hess(model :: RADNLPModel, x :: AbstractVector{T}; obj_weight :: Real =
   return obj_weight * Hx
 end
 
-function hess(nlp :: RADNLPModel, x :: AbstractVector, y :: AbstractVector; obj_weight :: Real = one(eltype(x)))
-  @lencheck nlp.meta.nvar x
-  @lencheck nlp.meta.ncon y
-  increment!(nlp, :neval_hess)
-  ℓ(x) = obj_weight * nlp.f(x) + dot(nlp.c(x), y)
-  Hx = ForwardDiff.hessian(ℓ, x)
-  return tril(Hx)
+function hess(model :: RADNLPModel, x :: AbstractVector{T}, y :: AbstractVector{T}; obj_weight :: Real = one(eltype(x))) where T
+  @lencheck model.meta.nvar x
+  @lencheck model.meta.ncon y
+  increment!(model, :neval_hess)
+  if model.meta.nnzh == 0
+    return spzeros(T, model.meta.nvar, model.meta.nvar)
+  end
+  if isnothing(model.cfℓ) throw(error("This is a matrix-free ADNLPModel.")) end
+  _fun = eval(model.cfℓ[1])
+  Hx = Base.invokelatest(_fun, x, y, obj_weight)
+  return Hx #precompiled function return the lower triangular
 end

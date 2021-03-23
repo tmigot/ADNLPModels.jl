@@ -44,6 +44,10 @@ for problem in setdiff(NLPModelsTest.nlp_problems,["BROWNDEN"])
       if pb_radnlp.meta.ncon > 0
         @test cons(pb_radnlp, x) ≈ cons(pb_adnlp, x)
         @test jac(pb_radnlp, x)  ≈ jac(pb_adnlp, x)
+        y = rand(pb_radnlp.meta.ncon)
+        @test hess(pb_radnlp, x, y) ≈ hess(pb_adnlp, x, y)
+        obj_weight = .7
+        @test hess(pb_radnlp, x, y, obj_weight = obj_weight) ≈ hess(pb_adnlp, x, y, obj_weight = obj_weight)
       end
     end
   end
