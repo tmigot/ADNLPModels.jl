@@ -1,4 +1,4 @@
-for problem in setdiff(NLPModelsTest.nlp_problems,["BROWNDEN"])
+for problem in setdiff(NLPModelsTest.nlp_problems, ["BROWNDEN"])
   @testset "Checking NLPModelsTest tests on problem $problem" begin
     nlp_ad = eval(Meta.parse(lowercase(problem) * "_autodiff"))()
     nlp_rad = eval(Meta.parse(lowercase(problem) * "_radnlp"))()
@@ -8,7 +8,7 @@ for problem in setdiff(NLPModelsTest.nlp_problems,["BROWNDEN"])
     
     nlps = [nlp_ad, nlp_man, nlp_rad]
     @testset "Check Consistency" begin
-      #consistent_nlps(nlps)
+      consistent_nlps(nlps, exclude = [hprod, jprod, jtprod, ghjvprod])
     end
     @testset "Check dimensions" begin
       check_nlp_dimensions(nlp_rad)

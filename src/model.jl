@@ -395,7 +395,7 @@ function NLPModels.hess_coord!(model :: RADNLPModel, x :: AbstractVector, vals :
   Hx = Base.invokelatest(_fun, x)
   #_fun = eval(model.cfH[2]) #ideally we want to use the in-place version but it returns a matrix...
   #J = _fun(vals, x)
-  vals .= Hx.nzval
+  vals .= obj_weight * Hx.nzval
   return vals
 end
 
@@ -404,7 +404,15 @@ function NLPModels.hess_coord!(model :: RADNLPModel, x :: AbstractVector, y :: A
   @lencheck model.meta.ncon y
   @lencheck model.meta.nnzh vals
   increment!(model, :neval_hess)
-  #... TODO
+  #####################################
+  # Tangi: to be improved:
+  if model.meta.nnzh == 0
+    return spzeros(T, model.meta.nvar, model.meta.nvar)
+  end
+  if isnothing(model.cfℓ) throw(error("This is a matrix-free ADNLPModel.")) end
+  _fun = eval(model.cfℓ[1])
+  Hx = Base.invokelatest(_fun, x, y, obj_weight)
+  vals .= Hx.nzval
   return vals
 end
 
