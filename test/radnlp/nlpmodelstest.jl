@@ -1,4 +1,4 @@
-for problem in setdiff(NLPModelsTest.nlp_problems,["BROWNDEN"])
+for problem in setdiff(NLPModelsTest.nlp_problems, ["BROWNDEN"])
   @testset "Checking NLPModelsTest tests on problem $problem" begin
     nlp_ad = eval(Meta.parse(lowercase(problem) * "_autodiff"))()
     nlp_rad = eval(Meta.parse(lowercase(problem) * "_radnlp"))()
@@ -8,7 +8,7 @@ for problem in setdiff(NLPModelsTest.nlp_problems,["BROWNDEN"])
     
     nlps = [nlp_ad, nlp_man, nlp_rad]
     @testset "Check Consistency" begin
-      #consistent_nlps(nlps)
+      consistent_nlps(nlps, exclude = [hprod, jprod, jtprod, ghjvprod])
     end
     @testset "Check dimensions" begin
       check_nlp_dimensions(nlp_rad)
@@ -44,6 +44,10 @@ for problem in setdiff(NLPModelsTest.nlp_problems,["BROWNDEN"])
       if pb_radnlp.meta.ncon > 0
         @test cons(pb_radnlp, x) ≈ cons(pb_adnlp, x)
         @test jac(pb_radnlp, x)  ≈ jac(pb_adnlp, x)
+        y = rand(pb_radnlp.meta.ncon)
+        @test hess(pb_radnlp, x, y) ≈ hess(pb_adnlp, x, y)
+        obj_weight = .7
+        @test hess(pb_radnlp, x, y, obj_weight = obj_weight) ≈ hess(pb_adnlp, x, y, obj_weight = obj_weight)
       end
     end
   end

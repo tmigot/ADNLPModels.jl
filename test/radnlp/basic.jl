@@ -47,5 +47,4 @@ function test_rautodiff_model()
   end
 end
 
-#Make it work!
-#test_rautodiff_model()
+test_rautodiff_model()
