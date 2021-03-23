@@ -70,5 +70,3 @@ function Base.iszero(x::Num)
     return (_x isa Number || _x isa SymbolicUtils.MPoly) && iszero(_x)
 end
 =#
-
-SymbolicUtils.to_mpoly(2(xs₁^2) + 8(xs₁^2)*(xs₂^2) + 18(xs₁^2)*(xs₂^4) - (4xs₁*(2.25 + xs₁*(1.0 - (xs₂^2)))) + -12xs₁*xs₂*(2.625 + xs₁*(1.0 - (xs₂^3))))
