@@ -115,7 +115,7 @@ function _meta_function(c, x0 :: AbstractVector{T}, m :: Int, n :: Int, ::Val{fa
   @variables xs[1:n]
   _fun = c(xs)
   S    = Symbolics.sparsejacobian(_fun, xs)
-  cfJ  = Symbolics.build_function(S, xs, expression = Val{false})
+  cfJ  = Symbolics.build_function(S.nzval, xs, expression = Val{false})
   nnzh = nnz(S) 
 
  return nnzh, cfJ
@@ -139,7 +139,7 @@ function _meta_function(f, x0 :: AbstractVector{T}, n :: Int, ::Val{false}) wher
   S    = tril(Symbolics.sparsehessian(_fun, xs))
   #use keyword `expression = Val{false}` to get a pre-compiled code
   #pair of out-of-place / in-place function
-  cfH  = Symbolics.build_function(S, xs, expression = Val{false})
+  cfH  = Symbolics.build_function(S.nzval, xs, expression = Val{false})
   nnzh = nnz(S) 
 
  return nnzh, (cfH[1], cfH[2], nnzh)
@@ -177,7 +177,7 @@ function _meta_function(f, c, x0 :: AbstractVector{T}, m :: Int, n :: Int, ::Val
   S = tril(Symbolics.sparsehessian(_lag, xs))
   #use keyword `expression = Val{false}` to get a pre-compiled code
   #pair of out-of-place / in-place function
-  cfℓ = Symbolics.build_function(S, xs, ys, obj_weight, expression = Val{false})
+  cfℓ = Symbolics.build_function(S.nzval, xs, ys, obj_weight, expression = Val{false})
   nnzh = nnz(S)
 
  return nnzh, cfℓ
@@ -324,9 +324,8 @@ function NLPModels.jac_structure!(model :: RADNLPModel, rows :: AbstractVector{<
   _fun = model.c(xs)
   Jx   = Symbolics.jacobian_sparsity(_fun, xs)
   #Tangi: We should do better here!
-  I, J, _ = findnz(Jx) 
-  rows .= I
-  cols .= J
+  rows .= findnz(Jx)[1]
+  cols .= findnz(Jx)[2]
   return rows, cols
 end
 
@@ -334,12 +333,8 @@ function NLPModels.jac_coord!(model :: RADNLPModel, x :: AbstractVector, vals ::
   @lencheck model.meta.nvar x
   @lencheck model.meta.nnzj vals
   increment!(model, :neval_jac)
-  #####################################
-  # Tangi: to be improved:
-  #ideally we want to use the in-place version but it returns a matrix...
-  _fun  = eval(model.cfJ[1])
-  Jx    = Base.invokelatest(_fun, x)
-  vals .= Jx.nzval
+  _fun  = eval(model.cfJ[2])
+  Base.invokelatest(_fun, vals, x)
   return vals
 end
 
@@ -349,8 +344,9 @@ function NLPModels.jac(model :: RADNLPModel, x :: AbstractVector)
 
   if isnothing(model.cfJ) throw(error("This is a matrix-free ADNLPModel.")) end
   _fun = eval(model.cfJ[1])
-  Jx   = Base.invokelatest(_fun, x)
-  return Jx
+  rows, cols = jac_structure(model)
+  vals = Base.invokelatest(_fun, x)
+  return sparse(rows, cols, vals, model.meta.ncon, model.meta.nvar)
 end
 
 function NLPModels.jprod!(model :: RADNLPModel, x :: AbstractVector, v :: AbstractVector, Jv :: AbstractVector)
@@ -371,7 +367,6 @@ end
 
 function NLPModels.hess_structure!(model :: RADNLPModel, rows :: AbstractVector{<: Integer}, cols :: AbstractVector{<: Integer})
   @lencheck model.meta.nnzh rows cols
-  #using Symbolics.hessian_sparsity
   if model.meta.ncon > 0
     @variables xs[1:model.meta.nvar]
     @variables ys[1:model.meta.ncon]
@@ -380,8 +375,9 @@ function NLPModels.hess_structure!(model :: RADNLPModel, rows :: AbstractVector{
     @variables xs[1:model.meta.nvar]
     _fun = model.f(xs)
   end
-  H = tril(Symbolics.hessian_sparsity(_fun, xs)) #with boolean values
-  rows, cols, _ = findnz(H) 
+  H = tril(Symbolics.hessian_sparsity(_fun, xs))
+  rows .= findnz(H)[1]
+  cols .= findnz(H)[2]
   return rows, cols
 end
 
@@ -389,39 +385,21 @@ function NLPModels.hess_coord!(model :: RADNLPModel, x :: AbstractVector, vals :
   @lencheck model.meta.nvar x
   @lencheck model.meta.nnzh vals
   increment!(model, :neval_hess)
-  if isnothing(model.cfH) throw(error("This is a matrix-free ADNLPModel.")) end
-  
-  #####################################
-  #=
-  # Tangi: to be improved:
-  _fun = eval(model.cfH[1])
-  Hx = Base.invokelatest(_fun, x)
-  #_fun = eval(model.cfH[2]) #ideally we want to use the in-place version but it returns a matrix...
-  #J = _fun(vals, x)
-  vals .= obj_weight * Hx.nzval #Okay, but where the non-zeros for the lagrangian hessian...
-  =#
-
   #Tangi: the only solution I found to get the right pattern...
   if model.meta.ncon > 0
     if isnothing(model.cfℓ) throw(error("This is a matrix-free ADNLPModel.")) end
-    _fun = eval(model.cfℓ[1])
-    Hx = Base.invokelatest(_fun, x, zeros(model.meta.ncon), obj_weight)
+    _fun = eval(model.cfℓ[2])
+    Base.invokelatest(_fun, vals, x, zeros(model.meta.ncon), obj_weight)
   else
     if obj_weight == 0
       vals .= 0
       return vals
     end 
-    if isnothing(model.cfH) 
-      throw(error("This is a matrix-free ADNLPModel.")) 
-    end
-    _fun = eval(model.cfH[1])
-    Hx = obj_weight * Base.invokelatest(_fun, x)
-  #@show Base.invokelatest(_fun, x)
+    if isnothing(model.cfH) throw(error("This is a matrix-free ADNLPModel.")) end
+    _fun = eval(model.cfH[2])
+    Base.invokelatest(_fun, vals, x)
+    vals .*= obj_weight
   end
-  #@show model.meta.ncon, length(vals), model.meta.nnzh, model.cfH[3]
-  #@show Hx
-  #@show Hx.nzval #Are we sure this is constant?
-  vals .= Hx.nzval
   return vals
 end
 
@@ -430,15 +408,12 @@ function NLPModels.hess_coord!(model :: RADNLPModel, x :: AbstractVector, y :: A
   @lencheck model.meta.ncon y
   @lencheck model.meta.nnzh vals
   increment!(model, :neval_hess)
-  #####################################
-  # Tangi: to be improved:
   if model.meta.nnzh == 0
     return vals
   end
   if isnothing(model.cfℓ) throw(error("This is a matrix-free ADNLPModel.")) end
-  _fun = eval(model.cfℓ[1])
-  Hx = Base.invokelatest(_fun, x, y, obj_weight)
-  vals .= Hx.nzval
+  _fun = eval(model.cfℓ[2])
+  Base.invokelatest(_fun, vals, x, y, obj_weight)
   return vals
 end
 
@@ -487,8 +462,9 @@ function hess(model :: RADNLPModel, x :: AbstractVector{T}; obj_weight :: Real =
   #Option 4: using symbolics:
   if isnothing(model.cfH) throw(error("This is a matrix-free ADNLPModel.")) end
   _fun = eval(model.cfH[1])
-  Hx = Base.invokelatest(_fun, x)
-  return obj_weight * Hx
+  vals = obj_weight * Base.invokelatest(_fun, x)
+  rows, cols = hess_structure(model)
+  return sparse(rows, cols, vals, model.meta.nvar, model.meta.nvar)
 end
 
 function hess(model :: RADNLPModel, x :: AbstractVector{T}, y :: AbstractVector{T}; obj_weight :: Real = one(eltype(x))) where T
@@ -500,6 +476,7 @@ function hess(model :: RADNLPModel, x :: AbstractVector{T}, y :: AbstractVector{
   end
   if isnothing(model.cfℓ) throw(error("This is a matrix-free ADNLPModel.")) end
   _fun = eval(model.cfℓ[1])
-  Hx = Base.invokelatest(_fun, x, y, obj_weight)
-  return Hx #precompiled function return the lower triangular
+  vals = Base.invokelatest(_fun, x, y, obj_weight)
+  rows, cols = hess_structure(model)
+  return sparse(rows, cols, vals, model.meta.nvar, model.meta.nvar) #precompiled function return the lower triangular
 end

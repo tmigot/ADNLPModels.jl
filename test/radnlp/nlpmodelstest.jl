@@ -8,6 +8,7 @@ for problem in setdiff(NLPModelsTest.nlp_problems, ["BROWNDEN"])
     
     nlps = [nlp_ad, nlp_man, nlp_rad]
     @testset "Check Consistency" begin
+      @info "TODOs: miss hprod, jprod, jtprod, ghjvprod"
       consistent_nlps(nlps, exclude = [hprod, jprod, jtprod, ghjvprod])
     end
     @testset "Check dimensions" begin
@@ -22,8 +23,7 @@ for problem in setdiff(NLPModelsTest.nlp_problems, ["BROWNDEN"])
       #view_subarray_nlp(nlp_ad)
     end
     @testset "Check coordinate memory" begin
-      @info "TODOs"
-      #coord_memory_nlp(nlp_ad)
+      coord_memory_nlp(nlp_ad)
     end
 
     @testset "Extra consistency" begin
