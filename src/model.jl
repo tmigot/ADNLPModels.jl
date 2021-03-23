@@ -323,8 +323,10 @@ function NLPModels.jac_structure!(model :: RADNLPModel, rows :: AbstractVector{<
   @variables xs[1:model.meta.nvar]
   _fun = model.c(xs)
   Jx   = Symbolics.jacobian_sparsity(_fun, xs)
-
-  rows, cols, _ = findnz(Jx) 
+  #Tangi: We should do better here!
+  I, J, _ = findnz(Jx) 
+  rows .= I
+  cols .= J
   return rows, cols
 end
 
@@ -390,12 +392,36 @@ function NLPModels.hess_coord!(model :: RADNLPModel, x :: AbstractVector, vals :
   if isnothing(model.cfH) throw(error("This is a matrix-free ADNLPModel.")) end
   
   #####################################
+  #=
   # Tangi: to be improved:
   _fun = eval(model.cfH[1])
   Hx = Base.invokelatest(_fun, x)
   #_fun = eval(model.cfH[2]) #ideally we want to use the in-place version but it returns a matrix...
   #J = _fun(vals, x)
-  vals .= obj_weight * Hx.nzval
+  vals .= obj_weight * Hx.nzval #Okay, but where the non-zeros for the lagrangian hessian...
+  =#
+
+  #Tangi: the only solution I found to get the right pattern...
+  if model.meta.ncon > 0
+    if isnothing(model.cfℓ) throw(error("This is a matrix-free ADNLPModel.")) end
+    _fun = eval(model.cfℓ[1])
+    Hx = Base.invokelatest(_fun, x, zeros(model.meta.ncon), obj_weight)
+  else
+    if obj_weight == 0
+      vals .= 0
+      return vals
+    end 
+    if isnothing(model.cfH) 
+      throw(error("This is a matrix-free ADNLPModel.")) 
+    end
+    _fun = eval(model.cfH[1])
+    Hx = obj_weight * Base.invokelatest(_fun, x)
+  #@show Base.invokelatest(_fun, x)
+  end
+  #@show model.meta.ncon, length(vals), model.meta.nnzh, model.cfH[3]
+  #@show Hx
+  #@show Hx.nzval #Are we sure this is constant?
+  vals .= Hx.nzval
   return vals
 end
 
@@ -407,7 +433,7 @@ function NLPModels.hess_coord!(model :: RADNLPModel, x :: AbstractVector, y :: A
   #####################################
   # Tangi: to be improved:
   if model.meta.nnzh == 0
-    return spzeros(T, model.meta.nvar, model.meta.nvar)
+    return vals
   end
   if isnothing(model.cfℓ) throw(error("This is a matrix-free ADNLPModel.")) end
   _fun = eval(model.cfℓ[1])
