@@ -46,14 +46,21 @@ function groups_to_stats(rb :: BenchmarkTools.BenchmarkGroup, N, models)
   stats = Dict([m => copy(empty_df) for m in models])
   for m in models
     collec = [s for (r,s) in rb[m]]
-    stats[m]["memory"] = [c.memory for c in collec]
-    stats[m]["allocs"] = [c.allocs for c in collec]
-    stats[m]["max_time"] = [maximum(c.times) for c in collec]
-    stats[m]["mean_time"] = [sum(c.times)/c.params.samples for c in collec]
+    stats[m][!,"memory"] = [c.memory for c in collec]
+    stats[m][!,"allocs"] = [c.allocs for c in collec]
+    stats[m][!,"max_time"] = [maximum(c.times) for c in collec]
+    stats[m][!,"mean_time"] = [sum(c.times)/c.params.samples for c in collec]
   end
   return stats
 end
 
 function group_stats(rb :: BenchmarkTools.BenchmarkGroup, N, fun, models)
   gstats = Dict([Symbol(f) => groups_to_stats(rb[f], N, models) for f in fun])
+end
+
+function performance_profile(stats::Dict{Symbol,DataFrame}, cost::Function, args...; kwargs...)
+  solvers = keys(stats)
+  dfs = (stats[s] for s in solvers)
+  P = hcat([cost(df) for df in dfs]...)
+  SolverBenchmark.performance_profile(P, string.(solvers), args...; kwargs...)
 end

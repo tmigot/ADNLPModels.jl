@@ -1,4 +1,4 @@
-function indef_radnlp(; n::Int=100, type::Val{T}=Val(Float64), kwargs...) where T
+function indef_mod_radnlp(; n::Int=100, type::Val{T}=Val(Float64), kwargs...) where T
   n ≥ 3 || error("indef : n ≥ 3")
   function f(x)
     n = length(x)
@@ -8,7 +8,7 @@ function indef_radnlp(; n::Int=100, type::Val{T}=Val(Float64), kwargs...) where 
   return RADNLPModel(f, x0, name="indef_radnlp"; kwargs...)
 end
 
-function indef_autodiff(; n::Int=100, type::Val{T}=Val(Float64)) where T
+function indef_mod_autodiff(; n::Int=100, type::Val{T}=Val(Float64)) where T
   n ≥ 3 || error("indef : n ≥ 3")
   function f(x)
     n = length(x)
