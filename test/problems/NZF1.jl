@@ -1,4 +1,4 @@
-function nzf1_radnlp(; n::Int=100, type::Val{T}=Val(Float64), kwargs...) where T
+function NZF1_radnlp(; n::Int=100, type::Val{T}=Val(Float64), kwargs...) where T
   function f(x)
     n = length(x)
     nbis = max(1,div(n,13))
@@ -14,10 +14,10 @@ function nzf1_radnlp(; n::Int=100, type::Val{T}=Val(Float64), kwargs...) where T
             + sum((x[i+6]-x[i+19])^2 for i=1:l-1)
   end
   x0 = ones(T, n)
-  return RADNLPModel(f, x0, name="nzf1_radnlp"; kwargs...)
+  return RADNLPModel(f, x0, name="NZF1_radnlp"; kwargs...)
 end
 
-function nzf1_autodiff(; n::Int=100, type::Val{T}=Val(Float64)) where T
+function NZF1_autodiff(; n::Int=100, type::Val{T}=Val(Float64)) where T
   function f(x)
     n = length(x)
     nbis = max(1,div(n,13))
@@ -33,5 +33,5 @@ function nzf1_autodiff(; n::Int=100, type::Val{T}=Val(Float64)) where T
             + sum((x[i+6]-x[i+19])^2 for i=1:l-1)
   end
   x0 = ones(T, n)
-  return ADNLPModel(f, x0, name="nzf1_autodiff")
+  return ADNLPModel(f, x0, name="NZF1_autodiff")
 end

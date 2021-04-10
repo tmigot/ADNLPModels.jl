@@ -1,5 +1,5 @@
 using Pkg
-Pkg.activate("env_bench")
+Pkg.activate("")
 using BenchmarkTools, DataFrames, Plots, Profile
 #using ProfileView
 #JSO packages
@@ -15,7 +15,7 @@ problems2 = ["arglina", "arglinb", "arglinc", "arwhead", "bdqrtic", "beale", "br
              "dqrtic", "edensch", "eg2", "engval1", "errinros_mod", "extrosnb", "fletcbv2",
              "fletcbv3_mod", "fletchcr", "freuroth", "genhumps", "genrose", "genrose_nash",
              "indef_mod", "liarwhd", "morebv", "ncb20", "ncb20b", "noncvxu2", "noncvxun",
-             "nondia", "nondquar", "penalty2", "penalty3", "powellsg", "power",
+             "nondia", "nondquar", "NZF1", "penalty2", "penalty3", "powellsg", "power",
              "quartc", "sbrybnd", "schmvett", "scosine", "sparsine", "sparsqur", "srosenbr",
              "sinquad", "tointgss", "tquartic", "tridia", "vardim", "woods"]
 #no jump model: "nzf1",
