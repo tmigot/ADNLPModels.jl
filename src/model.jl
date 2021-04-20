@@ -460,9 +460,7 @@ function hess(model :: RADNLPModel, x :: AbstractVector{T}; obj_weight :: Real =
   #Option 0: the old one
   #Hx = obj_weight * ForwardDiff.hessian(nlp.f, x)
   #Option 4: using symbolics:
-  if isnothing(model.cfH) throw(error("This is a matrix-free ADNLPModel.")) end
-  _fun = eval(model.cfH[1])
-  vals = obj_weight * Base.invokelatest(_fun, x)
+  vals = hess_coord(model, x; obj_weight=obj_weight)
   rows, cols = hess_structure(model)
   return sparse(rows, cols, vals, model.meta.nvar, model.meta.nvar)
 end
@@ -474,9 +472,7 @@ function hess(model :: RADNLPModel, x :: AbstractVector{T}, y :: AbstractVector{
   if model.meta.nnzh == 0
     return spzeros(T, model.meta.nvar, model.meta.nvar)
   end
-  if isnothing(model.cfℓ) throw(error("This is a matrix-free ADNLPModel.")) end
-  _fun = eval(model.cfℓ[1])
-  vals = Base.invokelatest(_fun, x, y, obj_weight)
+  vals = hess_coord(model, x, y; obj_weight=obj_weight)
   rows, cols = hess_structure(model)
   return sparse(rows, cols, vals, model.meta.nvar, model.meta.nvar) #precompiled function return the lower triangular
 end
