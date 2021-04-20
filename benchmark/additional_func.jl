@@ -9,7 +9,7 @@ function runbenchmark(problems,
   suite = BenchmarkGroup()
 
   # Add some child groups to our benchmark suite.
-  for f in fun
+  for f in keys(fun)
     suite[f] = BenchmarkGroup()
     for m in models
       suite[f][m] = BenchmarkGroup()
@@ -21,10 +21,10 @@ function runbenchmark(problems,
   for pb in problems
     for m in models
       npb = eval(Meta.parse("$(pb)_$(m)()"))
-      for f in fun
+      for (fs,f) in fun
         k = 1
         for x in (npb.meta.x0, rand(npb.meta.nvar))
-          suite[f][m][string(pb), x_tab[k]] = @benchmarkable eval($f)($npb, $x)
+          suite[fs][m][string(pb), x_tab[k]] = @benchmarkable eval($f)($npb, $x)
           k += 1
         end
       end
@@ -55,7 +55,7 @@ function groups_to_stats(rb :: BenchmarkTools.BenchmarkGroup, N, models)
 end
 
 function group_stats(rb :: BenchmarkTools.BenchmarkGroup, N, fun, models)
-  gstats = Dict([Symbol(f) => groups_to_stats(rb[f], N, models) for f in fun])
+  gstats = Dict([Symbol(f) => groups_to_stats(rb[f], N, models) for f in keys(fun)])
 end
 
 function performance_profile(stats::Dict{Symbol,DataFrame}, cost::Function, args...; kwargs...)

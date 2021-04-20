@@ -18,8 +18,11 @@ problems2 = ["arglina", "arglinb", "arglinc", "arwhead", "bdqrtic", "beale", "br
              "nondia", "nondquar", "NZF1", "penalty2", "penalty3", "powellsg", "power",
              "quartc", "sbrybnd", "schmvett", "scosine", "sparsine", "sparsqur", "srosenbr",
              "sinquad", "tointgss", "tquartic", "tridia", "vardim", "woods"]
+# problems with constraints
+problems3 = ["hs6", "hs7", "hs8", "hs9", "hs26", "hs27", "hs28", "hs39", "hs40", "hs42", "hs46",
+             "hs47", "hs48", "hs49", "hs50", "hs51", "hs52", "hs56", "hs63", "hs77", "hs79"]
 #no jump model: "nzf1",
-problems = problems2 #union(problems, problems2)
+problems = problems3[1:2] #union(problems, problems2, problems3)
 
 #List of problems used in tests
 #Problems from NLPModels
@@ -27,12 +30,13 @@ problems = problems2 #union(problems, problems2)
 #include("../test/problems/brownden.jl") #unconstrained n=4, dense hessian
 
 for pb in problems
-    include("../test/problems/$(lowercase(pb)).jl")
+    include("problems/$(lowercase(pb)).jl")
 end
 
 include("additional_func.jl")
 
 #Extend the functions of each problems to the variants of RADNLPModel
+nvar = 200 #targeted size /// doesn't really work because of OptimizationProblems
 for pb in problems #readdir("test/problems")
   eval(Meta.parse("$(pb)_radnlp_reverse(args... ; kwargs...) = $(pb)_radnlp(args... ; gradient = ADNLPModels.reverse, kwargs...)"))
   eval(Meta.parse("$(pb)_radnlp_smartreverse(args... ; kwargs...) = $(pb)_radnlp(args... ; gradient = ADNLPModels.smart_reverse, kwargs...)"))
@@ -40,15 +44,22 @@ for pb in problems #readdir("test/problems")
 end
 
 models = [:radnlp_smartreverse, :autodiff, :jump] #[:radnlp_reverse, :radnlp_smartreverse, :autodiff]
-fun    = [:obj, :grad, :hess, :hess_coord]
+fun    = Dict(:obj => (nlp, x) -> obj(nlp, x), 
+              :grad => (nlp, x) -> grad(nlp, x),
+              :hess => (nlp, x) -> hess(nlp, x), 
+              :hess_coord => (nlp, x) -> hess_coord(nlp, x), 
+              :hess_structure => (nlp, x) -> hess_structure(nlp),
+              :jac => (nlp, x) -> (nlp.meta.ncon > 0 ? jac(nlp, x) : zero(eltype(x)))
+              )
+funsym = keys(fun)
 
 rb = runbenchmark(problems, models, fun)
-N = length(rb[fun[1]][models[1]]) #number of problems
+N = length(rb[first(funsym)][models[1]]) #number of problems x number of x
 gstats = group_stats(rb, N, fun, models)
 
 @save "$(today)_bench_adnlpmodels.jld2" gstats
 
-for f in fun
+for f in funsym
   cost(df) = df.mean_time
   p = performance_profile(gstats[f], cost)
   png("perf-$(f)")
