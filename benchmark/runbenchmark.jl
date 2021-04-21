@@ -11,7 +11,8 @@ using JLD2, Dates
 
 #problems = ["hs5", "brownden"]
 problems2 = ["arglina", "arglinb", "arglinc", "arwhead", "bdqrtic", "beale", "broydn7d",
-             "brybnd", "chainwoo", "chnrosnb_mod", "cosine", "cragglvy", "dixon3dq", "dqdrtic",
+             "brybnd", "chainwoo", "chnrosnb_mod", "cosine", "cragglvy", "curly10", "curly20", 
+             "curly30" "dixon3dq", "dqdrtic",
              "dqrtic", "edensch", "eg2", "engval1", "errinros_mod", "extrosnb", "fletcbv2",
              "fletcbv3_mod", "fletchcr", "freuroth", "genhumps", "genrose", "genrose_nash",
              "indef_mod", "liarwhd", "morebv", "ncb20", "ncb20b", "noncvxu2", "noncvxun",
@@ -21,8 +22,7 @@ problems2 = ["arglina", "arglinb", "arglinc", "arwhead", "bdqrtic", "beale", "br
 # problems with constraints
 problems3 = ["hs6", "hs7", "hs8", "hs9", "hs26", "hs27", "hs28", "hs39", "hs40", "hs42", "hs46",
              "hs47", "hs48", "hs49", "hs50", "hs51", "hs52", "hs56", "hs63", "hs77", "hs79"]
-#no jump model: "nzf1",
-problems = problems3[1:2] #union(problems, problems2, problems3)
+problems = new #union(problems, problems2, problems3)
 
 #List of problems used in tests
 #Problems from NLPModels
@@ -49,7 +49,9 @@ fun    = Dict(:obj => (nlp, x) -> obj(nlp, x),
               :hess => (nlp, x) -> hess(nlp, x), 
               :hess_coord => (nlp, x) -> hess_coord(nlp, x), 
               :hess_structure => (nlp, x) -> hess_structure(nlp),
-              :jac => (nlp, x) -> (nlp.meta.ncon > 0 ? jac(nlp, x) : zero(eltype(x)))
+              :jac => (nlp, x) -> (nlp.meta.ncon > 0 ? jac(nlp, x) : zero(eltype(x))),
+              :jac_coord => (nlp, x) -> (nlp.meta.ncon > 0 ? jac_coord(nlp, x) : zero(eltype(x))),
+              :jac_structure => (nlp, x) -> (nlp.meta.ncon > 0 ? jac_structure(nlp) : zero(eltype(x)))
               )
 funsym = keys(fun)
 
@@ -57,7 +59,7 @@ rb = runbenchmark(problems, models, fun)
 N = length(rb[first(funsym)][models[1]]) #number of problems x number of x
 gstats = group_stats(rb, N, fun, models)
 
-@save "$(today)_bench_adnlpmodels.jld2" gstats
+@save "$(today())_bench_adnlpmodels.jld2" gstats
 
 for f in funsym
   cost(df) = df.mean_time
