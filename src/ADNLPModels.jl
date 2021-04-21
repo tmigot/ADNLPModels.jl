@@ -9,6 +9,7 @@ using NLPModels
 using Requires
 
 include("ad.jl")
+include("model.jl")
 include("nlp.jl")
 include("nls.jl")
 
