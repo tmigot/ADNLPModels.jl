@@ -1,5 +1,7 @@
 # A list of problems
 
+problems4 = ["clnlbeam", "controlinvestment", "hovercraft1d", "polygon1", "polygon2", "polygon3"]
+
 ... we should definitely try to add.
 
 * Rocket control: https://jump.dev/JuMP.jl/stable/tutorials/Nonlinear%20programs/rocket_control/

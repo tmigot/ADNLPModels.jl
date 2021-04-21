@@ -19,28 +19,28 @@ problems2 = ["arglina", "arglinb", "arglinc", "arwhead", "bdqrtic", "beale", "br
              "nondia", "nondquar", "NZF1", "penalty2", "penalty3", "powellsg", "power",
              "quartc", "sbrybnd", "schmvett", "scosine", "sparsine", "sparsqur", "srosenbr",
              "sinquad", "tointgss", "tquartic", "tridia", "vardim", "woods"]
-# problems with constraints
+# problems with constraints (none are scalable)
 problems3 = ["hs6", "hs7", "hs8", "hs9", "hs26", "hs27", "hs28", "hs39", "hs40", "hs42", "hs46",
              "hs47", "hs48", "hs49", "hs50", "hs51", "hs52", "hs56", "hs63", "hs77", "hs79"]
 #scalable constrained problems
 problems4 = ["clnlbeam", "controlinvestment", "hovercraft1d", "polygon1", "polygon2", "polygon3"]
-problems = problems4 #union(problems, problems2, problems3)
+using JuMP
+
+problems = problems4[1:2] #union(problems, problems2, problems3)
 
 #List of problems used in tests
 #Problems from NLPModels
 #include("../test/problems/hs5.jl") #bounds constraints n=2, dense hessian
 #include("../test/problems/brownden.jl") #unconstrained n=4, dense hessian
 
-using JuMP
 for pb in problems
-    #include("problems/$(lowercase(pb)).jl")
-    include("jump_problems/$(lowercase(pb)).jl")
+  include("problems/$(lowercase(pb)).jl")
 end
 
 include("additional_func.jl")
 
 #Extend the functions of each problems to the variants of RADNLPModel
-nvar = 20 #targeted size /// doesn't really work because of OptimizationProblems
+nvar = 32 #targeted size >=31 /// doesn't really work because of OptimizationProblems
 #=
 for pb in problems #readdir("test/problems")
   eval(Meta.parse("$(pb)_radnlp_reverse(args... ; kwargs...) = $(pb)_radnlp(args... ; gradient = ADNLPModels.reverse, kwargs...)"))
@@ -51,7 +51,7 @@ end
 for pb in problems #readdir("test/problems")
   eval(Meta.parse("$(pb)_radnlp_reverse(args... ; kwargs...) = $(pb)_radnlp(args... ; n=$(nvar), gradient = ADNLPModels.reverse, kwargs...)"))
   eval(Meta.parse("$(pb)_radnlp_smartreverse(args... ; kwargs...) = $(pb)_radnlp(args... ; n=$(nvar), gradient = ADNLPModels.smart_reverse, kwargs...)"))
-  eval(Meta.parse("$(pb)_jump(args... ; kwargs...) = MathOptNLPModel($(pb)(n=$(nvar)))"))
+  eval(Meta.parse("$(pb)_jump(args... ; kwargs...) = MathOptNLPModel($(pb)($(nvar)))"))
 end
 
 models = [:radnlp_smartreverse, :autodiff, :jump] #[:radnlp_reverse, :radnlp_smartreverse, :autodiff]
@@ -70,10 +70,10 @@ rb = runbenchmark(problems, models, fun)
 N = length(rb[first(funsym)][models[1]]) #number of problems x number of x
 gstats = group_stats(rb, N, fun, models)
 
-@save "$(today())_bench_adnlpmodels.jld2" gstats
+@save "$(today())_$(nvar)_bench_adnlpmodels.jld2" gstats
 
 for f in funsym
   cost(df) = df.mean_time
   p = performance_profile(gstats[f], cost)
-  png("perf-$(f)")
+  png("$(today())_$(nvar)_perf-$(f)")
 end

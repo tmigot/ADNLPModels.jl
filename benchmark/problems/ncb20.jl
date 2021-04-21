@@ -1,5 +1,5 @@
 function ncb20_radnlp(; n::Int=100, type::Val{T}=Val(Float64), kwargs...) where T
-  n ≥ 20 || error("ncb20 : n ≥ 20")
+  n ≥ 31 || error("ncb20 : n ≥ 31")
   function f(x)
     n = length(x)
     h = 1.0/(n-1)
@@ -16,7 +16,7 @@ function ncb20_radnlp(; n::Int=100, type::Val{T}=Val(Float64), kwargs...) where 
 end
 
 function ncb20_autodiff(; n::Int=100, type::Val{T}=Val(Float64)) where T
-  n ≥ 20 || error("ncb20 : n ≥ 20")
+  n ≥ 31 || error("ncb20 : n ≥ 31")
   function f(x)
     n = length(x)
     h = 1.0/(n-1)
