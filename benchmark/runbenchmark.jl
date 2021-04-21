@@ -26,7 +26,7 @@ problems3 = ["hs6", "hs7", "hs8", "hs9", "hs26", "hs27", "hs28", "hs39", "hs40",
 problems4 = ["clnlbeam", "controlinvestment", "hovercraft1d", "polygon1", "polygon2", "polygon3"]
 using JuMP
 
-problems = problems4[1:2] #union(problems, problems2, problems3)
+problems = problems3 #union(problems, problems2, problems3)
 
 #List of problems used in tests
 #Problems from NLPModels
@@ -49,12 +49,13 @@ for pb in problems #readdir("test/problems")
 end
 =#
 for pb in problems #readdir("test/problems")
+  eval(Meta.parse("$(pb)_radnlp_smartreverse(args... ; kwargs...) = $(pb)_radnlp(args... ; n=$(nvar), gradient = ADNLPModels.smart_reverse, kwargs...)"))
   eval(Meta.parse("$(pb)_reverse(args... ; kwargs...) = $(pb)_autodiff(args... ; adbackend=ADNLPModels.ReverseDiffAD(), n=$(nvar), kwargs...)"))
   eval(Meta.parse("$(pb)_zygote(args... ; kwargs...) = $(pb)_autodiff(args... ;adbackend=ADNLPModels.ZygoteAD(), n=$(nvar), kwargs...)"))
   eval(Meta.parse("$(pb)_jump(args... ; kwargs...) = MathOptNLPModel($(pb)($(nvar)))"))
 end
 
-models = [:reverse, :zygote, :autodiff, :jump] #[:radnlp_reverse, :radnlp_smartreverse, :autodiff]
+models = [:reverse, :zygote, :autodiff, :radnlp_smartreverse, :jump] #[:radnlp_reverse, :radnlp_smartreverse, :autodiff]
 fun    = Dict(:obj => (nlp, x) -> obj(nlp, x), 
               :grad => (nlp, x) -> grad(nlp, x),
               :hess => (nlp, x) -> hess(nlp, x), 
