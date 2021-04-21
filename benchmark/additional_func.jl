@@ -16,14 +16,14 @@ function runbenchmark(problems,
     end
   end
 
-  x_tab = ["x0", "xrand"]
+  x_tab = ["x0", "xrand", "10xrand"]
 
   for pb in problems
     for m in models
       npb = eval(Meta.parse("$(pb)_$(m)()"))
       for (fs,f) in fun
         k = 1
-        for x in (npb.meta.x0, rand(npb.meta.nvar))
+        for x in (npb.meta.x0, rand(npb.meta.nvar), 10 * rand(npb.meta.nvar))
           suite[fs][m][string(pb), x_tab[k]] = @benchmarkable eval($f)($npb, $x)
           k += 1
         end
