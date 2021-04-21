@@ -383,7 +383,7 @@ function NLPModels.hess_structure!(model :: RADNLPModel, rows :: AbstractVector{
   return rows, cols
 end
 
-function NLPModels.hess_coord!(model :: RADNLPModel, x :: AbstractVector, vals :: AbstractVector; obj_weight :: Float64=1.0)
+function NLPModels.hess_coord!(model :: RADNLPModel, x :: AbstractVector, vals :: AbstractVector; obj_weight=1.0)
   @lencheck model.meta.nvar x
   @lencheck model.meta.nnzh vals
   increment!(model, :neval_hess)
@@ -405,7 +405,7 @@ function NLPModels.hess_coord!(model :: RADNLPModel, x :: AbstractVector, vals :
   return vals
 end
 
-function NLPModels.hess_coord!(model :: RADNLPModel, x :: AbstractVector, y :: AbstractVector, vals :: AbstractVector; obj_weight :: Float64=1.0)
+function NLPModels.hess_coord!(model :: RADNLPModel, x :: AbstractVector, y :: AbstractVector, vals :: AbstractVector; obj_weight=1.0)
   @lencheck model.meta.nvar x
   @lencheck model.meta.ncon y
   @lencheck model.meta.nnzh vals
@@ -419,7 +419,7 @@ function NLPModels.hess_coord!(model :: RADNLPModel, x :: AbstractVector, y :: A
   return vals
 end
 
-function NLPModels.hprod!(model :: RADNLPModel, x :: AbstractVector, y :: AbstractVector, v :: AbstractVector, Hv :: AbstractVector; obj_weight :: Float64=1.0)
+function NLPModels.hprod!(model :: RADNLPModel, x :: AbstractVector, y :: AbstractVector, v :: AbstractVector, Hv :: AbstractVector; obj_weight=1.0)
   @lencheck model.meta.nvar x v Hv
   @lencheck model.meta.ncon y
   increment!(model, :neval_hprod)
@@ -429,7 +429,7 @@ function NLPModels.hprod!(model :: RADNLPModel, x :: AbstractVector, y :: Abstra
   return Hv
 end
 
-function NLPModels.hprod!(model :: RADNLPModel, x :: AbstractVector, v :: AbstractVector, Hv :: AbstractVector; obj_weight :: Float64=1.0)
+function NLPModels.hprod!(model :: RADNLPModel, x :: AbstractVector, v :: AbstractVector, Hv :: AbstractVector; obj_weight=1.0)
   @lencheck model.meta.nvar x v Hv
   increment!(model, :neval_hprod)
   #Option 1
