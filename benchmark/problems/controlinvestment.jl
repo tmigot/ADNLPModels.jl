@@ -1,6 +1,6 @@
 using NLPModelsJuMP, JuMP
 
-function controlinvestment(args...; n::Int=200, kwargs...)
+function controlinvestment(n::Int=200, args...; kwargs...)
     
   m = Model()
 
