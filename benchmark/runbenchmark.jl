@@ -24,14 +24,8 @@ problems3 = ["hs6", "hs7", "hs8", "hs9", "hs26", "hs27", "hs28", "hs39", "hs40",
              "hs47", "hs48", "hs49", "hs50", "hs51", "hs52", "hs56", "hs63", "hs77", "hs79"]
 #scalable constrained problems
 problems4 = ["clnlbeam", "controlinvestment", "hovercraft1d", "polygon1", "polygon2", "polygon3"]
-using JuMP
 
-problems = problems3 #union(problems, problems2, problems3)
-
-#List of problems used in tests
-#Problems from NLPModels
-#include("../test/problems/hs5.jl") #bounds constraints n=2, dense hessian
-#include("../test/problems/brownden.jl") #unconstrained n=4, dense hessian
+problems = union(problems2, problems4)
 
 for pb in problems
   include("problems/$(lowercase(pb)).jl")
@@ -39,15 +33,22 @@ end
 
 include("additional_func.jl")
 
-#Extend the functions of each problems to the variants of RADNLPModel
-nvar = 32 #targeted size >=31 /// doesn't really work because of OptimizationProblems
 #=
-for pb in problems #readdir("test/problems")
-  eval(Meta.parse("$(pb)_radnlp_reverse(args... ; kwargs...) = $(pb)_radnlp(args... ; gradient = ADNLPModels.reverse, kwargs...)"))
-  eval(Meta.parse("$(pb)_radnlp_smartreverse(args... ; kwargs...) = $(pb)_radnlp(args... ; gradient = ADNLPModels.smart_reverse, kwargs...)"))
-  eval(Meta.parse("$(pb)_jump(args... ; kwargs...) = MathOptNLPModel($(pb)())"))
+using Symbolics
+function simplified_function(fc :: Function, n)
+  @variables xs[1:n]
+  _fun = Symbolics.simplify(fc(xs))
+  _fun = eval(Symbolics.build_function(_fun, xs, expression = Val{false}))
+  return x -> Base.invokelatest(_fun, x)
+end
+function simplify_adnlpmodel(nlp)
+  nlp.f = simplified_function(nlp.f, nlp.meta.nvar)
+  return nlp
 end
 =#
+
+#Extend the functions of each problems to the variants of RADNLPModel
+nvar = 32 #targeted size >=31
 for pb in problems #readdir("test/problems")
   eval(Meta.parse("$(pb)_radnlp_smartreverse(args... ; kwargs...) = $(pb)_radnlp(args... ; n=$(nvar), gradient = ADNLPModels.smart_reverse, kwargs...)"))
   eval(Meta.parse("$(pb)_reverse(args... ; kwargs...) = $(pb)_autodiff(args... ; adbackend=ADNLPModels.ReverseDiffAD(), n=$(nvar), kwargs...)"))
@@ -55,7 +56,7 @@ for pb in problems #readdir("test/problems")
   eval(Meta.parse("$(pb)_jump(args... ; kwargs...) = MathOptNLPModel($(pb)($(nvar)))"))
 end
 
-models = [:reverse, :zygote, :autodiff, :radnlp_smartreverse, :jump] #[:radnlp_reverse, :radnlp_smartreverse, :autodiff]
+models = [:reverse, :zygote, :autodiff, :radnlp_smartreverse, :simplified, :jump]
 fun    = Dict(:obj => (nlp, x) -> obj(nlp, x), 
               :grad => (nlp, x) -> grad(nlp, x),
               :hess => (nlp, x) -> hess(nlp, x), 
@@ -68,13 +69,17 @@ fun    = Dict(:obj => (nlp, x) -> obj(nlp, x),
 funsym = keys(fun)
 
 rb = runbenchmark(problems, models, fun)
-N = length(rb[first(funsym)][models[1]]) #number of problems x number of x
+N = length(rb[first(funsym)][models[1]]) #(number of problems) x (number of x)
 gstats = group_stats(rb, N, fun, models)
 
-@save "$(today())_$(nvar)_bench_adnlpmodels.jld2" gstats
+@save "$(today())_$(nvar)_$(length(problems))_bench_adnlpmodels.jld2" gstats
 
 for f in funsym
   cost(df) = df.mean_time
-  p = performance_profile(gstats[f], cost)
-  png("$(today())_$(nvar)_perf-$(f)")
+  p = performance_profile(
+    gstats[f], cost, 
+    title="Performance profile of $(f) on $(length(problems)) pbs with avg size $(nvar)", 
+    legend=:bottomright
+  )
+  png("$(today())_$(nvar)_$(length(problems))_perf-$(f)")
 end
