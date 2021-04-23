@@ -23,7 +23,7 @@ problems2 = ["arglina", "arglinb", "arglinc", "arwhead", "bdqrtic", "beale", "br
 problems3 = ["hs6", "hs7", "hs8", "hs9", "hs26", "hs27", "hs28", "hs39", "hs40", "hs42", "hs46",
              "hs47", "hs48", "hs49", "hs50", "hs51", "hs52", "hs56", "hs63", "hs77", "hs79"]
 #scalable constrained problems
-problems4 = ["clnlbeam", "controlinvestment", "hovercraft1d", "polygon1", "polygon2", "polygon3"]
+problems4 = ["clnlbeam", "controlinvestment", "hovercraft1d", "polygon1", "polygon2", "polygon3", "structural"]
 
 problems = union(problems2, problems4)
 
@@ -48,7 +48,7 @@ end
 =#
 
 #Extend the functions of each problems to the variants of RADNLPModel
-nvar = 32 #targeted size >=31
+nvar = 100 #targeted size >=31
 for pb in problems #readdir("test/problems")
   eval(Meta.parse("$(pb)_radnlp_smartreverse(args... ; kwargs...) = $(pb)_radnlp(args... ; n=$(nvar), gradient = ADNLPModels.smart_reverse, kwargs...)"))
   eval(Meta.parse("$(pb)_reverse(args... ; kwargs...) = $(pb)_autodiff(args... ; adbackend=ADNLPModels.ReverseDiffAD(), n=$(nvar), kwargs...)"))
@@ -56,7 +56,7 @@ for pb in problems #readdir("test/problems")
   eval(Meta.parse("$(pb)_jump(args... ; kwargs...) = MathOptNLPModel($(pb)($(nvar)))"))
 end
 
-models = [:reverse, :zygote, :autodiff, :radnlp_smartreverse, :simplified, :jump]
+models = [:reverse, :zygote, :autodiff, :radnlp_smartreverse, :jump]
 fun    = Dict(:obj => (nlp, x) -> obj(nlp, x), 
               :grad => (nlp, x) -> grad(nlp, x),
               :hess => (nlp, x) -> hess(nlp, x), 

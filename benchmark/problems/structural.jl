@@ -3,12 +3,14 @@ https://nbviewer.jupyter.org/urls/laurentlessard.com/teaching/cs524/examples/Str
 
 Structural optimization
 =#
+using LinearAlgebra
 function structural(n=100, args...; kwargs...)
 
-    Nx = div(n,2)
-    Ny = n
+    sub2ind(shape, a, b) = LinearIndices(shape)[CartesianIndex.(a, b)]
+    Nx = min(Int(round(n^(1/3))), 6)
+    Ny = Int(round(n^(1/3)))
     # FIXED NODES
-    fixed = [ sub2ind((Nx,Ny),i,1) for i = 3:6 ]
+    fixed = [ sub2ind((Nx,Ny),i,1) for i = 3:Nx ]
 
     # crunching
     #loaded = [ (sub2ind((Nx,Ny),i,Ny), 0,1) for i = 4:5 ]
@@ -80,10 +82,11 @@ function structural(n=100, args...; kwargs...)
 end
 
 function structural_autodiff(; n::Int=100, type::Val{T}=Val(Float64), adbackend=ADNLPModels.ForwardDiffAD()) where T
-    Nx = div(n,2)
-    Ny = n
+    sub2ind(shape, a, b) = LinearIndices(shape)[CartesianIndex.(a, b)]
+    Nx = min(Int(round(n^(1/3))), 6)
+    Ny = Int(round(n^(1/3)))
     # FIXED NODES
-    fixed = [ sub2ind((Nx,Ny),i,1) for i = 3:6 ]
+    fixed = [ sub2ind((Nx,Ny),i,1) for i = 3:Nx ]
 
     # crunching
     #loaded = [ (sub2ind((Nx,Ny),i,Ny), 0,1) for i = 4:5 ]
@@ -150,10 +153,10 @@ function structural_autodiff(; n::Int=100, type::Val{T}=Val(Float64), adbackend=
 end
 
 function structural_radnlp(; n::Int=100, type::Val{T}=Val(Float64)) where T
-    Nx = div(n,2)
-    Ny = n
+    Nx = min(Int(round(n^(1/3))), 6)
+    Ny = Int(round(n^(1/3)))
     # FIXED NODES
-    fixed = [ sub2ind((Nx,Ny),i,1) for i = 3:6 ]
+    fixed = [ sub2ind((Nx,Ny),i,1) for i = 3:Nx ]
 
     # crunching
     #loaded = [ (sub2ind((Nx,Ny),i,Ny), 0,1) for i = 4:5 ]
