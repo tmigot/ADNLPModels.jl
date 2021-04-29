@@ -54,28 +54,22 @@ hessian(b::ADBackend, ::Any, ::Any) = throw_error(b)
 Jprod(b::ADBackend, ::Any, ::Any, ::Any) = throw_error(b)
 Jtprod(b::ADBackend, ::Any, ::Any, ::Any) = throw_error(b)
 function hess_structure!(
-  b::ADBackend, 
-  nlp, 
-  rows::AbstractVector{<:Integer}, 
-  cols::AbstractVector{<:Integer}
+  b::ADBackend,
+  nlp,
+  rows::AbstractVector{<:Integer},
+  cols::AbstractVector{<:Integer},
 )
   n = nlp.meta.nvar
-  I = ((i,j) for i = 1:n, j = 1:n if i ≥ j)
+  I = ((i, j) for i = 1:n, j = 1:n if i ≥ j)
   rows .= getindex.(I, 1)
   cols .= getindex.(I, 2)
   return rows, cols
 end
-function hess_coord!(
-  b::ADBackend, 
-  nlp, 
-  x::AbstractVector, 
-  ℓ::Function, 
-  vals::AbstractVector
-)
+function hess_coord!(b::ADBackend, nlp, x::AbstractVector, ℓ::Function, vals::AbstractVector)
   Hx = hessian(b, ℓ, x)
   k = 1
-  for j = 1 : nlp.meta.nvar
-    for i = j : nlp.meta.nvar
+  for j = 1:(nlp.meta.nvar)
+    for i = j:(nlp.meta.nvar)
       vals[k] = Hx[i, j]
       k += 1
     end
@@ -83,10 +77,10 @@ function hess_coord!(
   return vals
 end
 function jac_structure!(
-  b::ADBackend, 
-  nlp, 
-  rows::AbstractVector{<:Integer}, 
-  cols::AbstractVector{<:Integer}
+  b::ADBackend,
+  nlp,
+  rows::AbstractVector{<:Integer},
+  cols::AbstractVector{<:Integer},
 )
   m, n = nlp.meta.ncon, nlp.meta.nvar
   I = ((i, j) for i = 1:m, j = 1:n)
@@ -94,12 +88,7 @@ function jac_structure!(
   cols .= getindex.(I, 2)[:]
   return rows, cols
 end
-function jac_coord!(
-  b::ADBackend, 
-  nlp, 
-  x::AbstractVector, 
-  vals::AbstractVector
-)
+function jac_coord!(b::ADBackend, nlp, x::AbstractVector, vals::AbstractVector)
   Jx = jacobian(b, nlp.c, x)
   vals .= Jx[:]
   return vals

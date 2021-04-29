@@ -9,8 +9,7 @@ function (regr::LinearRegression)(beta)
 end
 
 function test_autodiff_backend_error()
-  @testset "Error without loading package - $adbackend" for adbackend in 
-                                                                      (:ZygoteAD, :ReverseDiffAD)
+  @testset "Error without loading package - $adbackend" for adbackend in (:ZygoteAD, :ReverseDiffAD)
     adbackend = eval(adbackend)(0, 0)
     @test_throws ArgumentError gradient(adbackend, sum, [1.0])
     @test_throws ArgumentError gradient!(adbackend, [1.0], sum, [1.0])

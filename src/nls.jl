@@ -384,6 +384,7 @@ function NLPModels.hess_structure!(
   rows::AbstractVector{<:Integer},
   cols::AbstractVector{<:Integer},
 )
+  @lencheck nls.meta.nnzh rows cols
   return hess_structure!(nls.adbackend, nls, rows, cols)
 end
 
