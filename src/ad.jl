@@ -1,45 +1,45 @@
 abstract type ADBackend end
 struct ForwardDiffAD <: ADBackend
-  nnzh
-  nnzj
+  nnzh::Int
+  nnzj::Int
 end
-function ForwardDiffAD(f, c, x0, ncon)
+function ForwardDiffAD(f, c, x0::AbstractVector, ncon::Integer)
   nvar = length(x0)
   nnzh = nvar * (nvar + 1) / 2
   nnzj = nvar * ncon
   return ForwardDiffAD(nnzh, nnzj)
 end
-function ForwardDiffAD(f, x0)
+function ForwardDiffAD(f, x0::AbstractVector)
   nvar = length(x0)
   nnzh = nvar * (nvar + 1) / 2
   return ForwardDiffAD(nnzh, 0)
 end
 struct ZygoteAD <: ADBackend
-  nnzh
-  nnzj
+  nnzh::Int
+  nnzj::Int
 end
-function ZygoteAD(f, c, x0, ncon)
+function ZygoteAD(f, c, x0::AbstractVector, ncon::Integer)
   nvar = length(x0)
   nnzh = nvar * (nvar + 1) / 2
   nnzj = nvar * ncon
   return ZygoteAD(nnzh, nnzj)
 end
-function ZygoteAD(f, x0)
+function ZygoteAD(f, x0::AbstractVector)
   nvar = length(x0)
   nnzh = nvar * (nvar + 1) / 2
   return ZygoteAD(nnzh, 0)
 end
 struct ReverseDiffAD <: ADBackend
-  nnzh
-  nnzj
+  nnzh::Int
+  nnzj::Int
 end
-function ReverseDiffAD(f, c, x0, ncon)
+function ReverseDiffAD(f, c, x0::AbstractVector, ncon::Integer)
   nvar = length(x0)
   nnzh = nvar * (nvar + 1) / 2
   nnzj = nvar * ncon
   return ReverseDiffAD(nnzh, nnzj)
 end
-function ReverseDiffAD(f, x0)
+function ReverseDiffAD(f, x0::AbstractVector)
   nvar = length(x0)
   nnzh = nvar * (nvar + 1) / 2
   return ReverseDiffAD(nnzh, 0)
